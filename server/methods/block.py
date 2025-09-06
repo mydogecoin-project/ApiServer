@@ -9,11 +9,15 @@ class Block():
         data = utils.make_request("getblockhash", [height])
 
         if data["error"] is None:
-            bhash = data["result"]
+            txid = data["result"]
             data.pop("result")
-            data["result"] = utils.make_request("getblock", [bhash])["result"]
-            data["result"]["txcount"] = data["result"]["nTx"]
-            data["result"].pop("nTx")
+            block = utils.make_request("getblock", [txid])
+            data["result"] = block["result"]
+
+            # Fix: handle missing nTx
+            txcount = data["result"].get("nTx", len(data["result"].get("tx", [])))
+            data["result"]["txcount"] = txcount
+            data["result"].pop("nTx", None)
 
         return data
 
@@ -22,8 +26,9 @@ class Block():
         data = utils.make_request("getblock", [bhash])
 
         if data["error"] is None:
-            data["result"]["txcount"] = data["result"]["nTx"]
-            data["result"].pop("nTx")
+            txcount = data["result"].get("nTx", len(data["result"].get("tx", [])))
+            data["result"]["txcount"] = txcount
+            data["result"].pop("nTx", None)
 
         return data
 
@@ -49,8 +54,11 @@ class Block():
 
                 data["result"] = block["result"]
                 data["result"]["nethash"] = int(nethash["result"])
-                data["result"]["txcount"] = data["result"]["nTx"]
-                data["result"].pop("nTx")
+
+                # Fix: handle missing nTx
+                txcount = data["result"].get("nTx", len(data["result"].get("tx", [])))
+                data["result"]["txcount"] = txcount
+                data["result"].pop("nTx", None)
 
                 result.append(data["result"])
 
@@ -60,4 +68,4 @@ class Block():
     @cache.memoize(timeout=config.cache)
     def inputs(cls, bhash: str):
         data = cls.hash(bhash)
-        return Transaction.addresses(data["result"]["tx"])
+        return Transaction().addresses(data["result"]["tx"])
