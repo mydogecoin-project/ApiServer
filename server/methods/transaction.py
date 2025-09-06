@@ -1,9 +1,10 @@
 from server import utils
 from server import cache
 import config
+import json
 
-
-class Transaction:
+class Transaction():
+    
     @classmethod
     def broadcast(cls, raw: str):
         return utils.make_request("sendrawtransaction", [raw])
@@ -17,64 +18,50 @@ class Transaction:
     def info(cls, thash: str):
         data = utils.make_request("getrawtransaction", [thash, True])
 
-        if data["error"] is not None:
-            return data
+        # Handle transaction-not-found error (-5) gracefully
+        if data.get("error") and data["error"].get("code") == -5:
+            return {
+                "error": {"code": -5, "message": "Transaction not found"},
+                "result": None
+            }
 
-        if "blockhash" in data["result"]:
-            block = utils.make_request(
-                "getblock", [data["result"]["blockhash"]]
-            )["result"]
-            data["result"]["height"] = block["height"]
-        else:
-            data["result"]["height"] = -1
+        if data["error"] is None:
+            # If confirmed, attach block height
+            if "blockhash" in data["result"]:
+                block = utils.make_request("getblock", [data["result"]["blockhash"]])["result"]
+                data["result"]["height"] = block["height"]
+            else:
+                # In mempool
+                data["result"]["height"] = -1
 
-        if data["result"]["height"] != 0:
-            for index, vin in enumerate(data["result"]["vin"]):
-                if "txid" not in vin:
-                    continue
+            # Attach vin details (scriptPubKey + value)
+            if data["result"]["height"] != 0:
+                for index, vin in enumerate(data["result"]["vin"]):
+                    if "txid" in vin:
+                        vin_data = utils.make_request("getrawtransaction", [vin["txid"], True])
+                        if vin_data["error"] is None:
+                            prev_vout = vin_data["result"]["vout"][vin["vout"]]
+                            data["result"]["vin"][index]["scriptPubKey"] = prev_vout["scriptPubKey"]
+                            data["result"]["vin"][index]["value"] = utils.satoshis(prev_vout["value"])
 
-                vin_data = utils.make_request(
-                    "getrawtransaction", [vin["txid"], True]
-                )
+            # Normalize vout values + compute total
+            amount = 0
+            for index, vout in enumerate(data["result"]["vout"]):
+                sat_value = utils.satoshis(vout["value"])
+                data["result"]["vout"][index]["value"] = sat_value
+                amount += sat_value
 
-                if vin_data["error"] is not None:
-                    continue
-
-                spk = vin_data["result"]["vout"][vin["vout"]]["scriptPubKey"]
-
-                if "address" in spk:
-                    spk["addresses"] = [spk["address"]]
-
-                data["result"]["vin"][index]["scriptPubKey"] = spk
-
-                data["result"]["vin"][index]["value"] = utils.satoshis(
-                    vin_data["result"]["vout"][vin["vout"]]["value"]
-                )
-
-        amount = 0
-
-        for index, vout in enumerate(data["result"]["vout"]):
-            data["result"]["vout"][index]["value"] = utils.satoshis(
-                vout["value"]
-            )
-
-            if "address" in data["result"]["vout"][index]["scriptPubKey"]:
-                data["result"]["vout"][index]["scriptPubKey"]["addresses"] = [
-                    data["result"]["vout"][index]["scriptPubKey"]["address"]
-                ]
-
-            amount += vout["value"]
-
-        data["result"]["amount"] = amount
+            data["result"]["amount"] = amount
 
         return data
+
 
     @classmethod
     @cache.memoize(timeout=config.cache)
     def addresses(cls, tx_data):
         updates = {}
         for tx in tx_data:
-            transaction = Transaction.info(tx)
+            transaction = Transaction().info(tx)
             vin = transaction["result"]["vin"]
             vout = transaction["result"]["vout"]
 
@@ -88,14 +75,6 @@ class Transaction:
                             else:
                                 updates[address] = [tx]
 
-                    if "address" in info["scriptPubKey"]:
-                        address = info["scriptPubKey"]["address"]
-                        if address in updates:
-                            updates[address].append(tx)
-                            updates[address] = list(set(updates[address]))
-                        else:
-                            updates[address] = [tx]
-
             for info in vout:
                 if "scriptPubKey" in info:
                     if "addresses" in info["scriptPubKey"]:
@@ -105,14 +84,6 @@ class Transaction:
                                 updates[address] = list(set(updates[address]))
                             else:
                                 updates[address] = [tx]
-
-                    if "address" in info["scriptPubKey"]:
-                        address = info["scriptPubKey"]["address"]
-                        if address in updates:
-                            updates[address].append(tx)
-                            updates[address] = list(set(updates[address]))
-                        else:
-                            updates[address] = [tx]
 
         return updates
 
