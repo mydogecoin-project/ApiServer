@@ -27,7 +27,8 @@ class Address:
 
         if data["error"] is None:
             balance = sum([utxo["amount"] for utxo in data["result"]])
-            data["result"] = {"balance": balance}
+            satoshi_amount = int(balance * 100000000)
+            data["result"] = {"balance": f"{satoshi_amount:02d}"}
 
         return data
 
