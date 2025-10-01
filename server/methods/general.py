@@ -41,8 +41,8 @@ class General():
     @classmethod
     @cache.memoize(timeout=1)
     def getprice(cls):
-        #result = utils.getprice()
-        #return result
+        result = utils.getprice()
+        return result
         return {"":""}
 
     @classmethod

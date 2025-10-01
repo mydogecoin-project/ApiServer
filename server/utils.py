@@ -162,7 +162,7 @@ def getprice():
     try:
         try:
             result = subprocess.run(
-                ['python3', '/root/api-server/gen_price.py'],
+                ['python3', '/root/api-server-mydoge/gen_price.py'],
                 check=True,
                 capture_output=True,
                 text=True
@@ -177,7 +177,7 @@ def getprice():
             btc = 0.0
             usd = 0.0
         try:
-            with open('/root/api-server/price.log', 'r') as file:
+            with open('/root/api-server-mydoge/price.log', 'r') as file:
                 content = file.read().strip()
 
             if not content:
