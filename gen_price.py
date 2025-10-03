@@ -47,14 +47,34 @@ def gen_p():
     except requests.exceptions.RequestException as e:
         print(f"LiveCoinWatch failed: {e}")
         lcw_usd = 0.0
+        
+    # ------miningpoolstats
+    from requests_html import HTMLSession
+
+    url = "https://miningpoolstats.stream/mydogecoin"
+
+    session = HTMLSession()
+    resp = session.get(url)
+    resp.html.render(timeout=20)   # runs the JavaScript
+
+    price_span = resp.html.find("#stats_priceusd", first=True)
+
+    if price_span:
+        mgpts2 = 0
+        price_text = price_span.text.split()[0]
+        price_value = float(price_text)
+        mgpts2 = round(float(price_text), 10)
+        print("Miningpoolstats price", mgpts2)    
 
     # --- Choose max between LCW and CoinPaprika ---
-    getmax_val = max(lcw_usd, gusd)
+    getmax_val = max(lcw_usd, gusd,mgpts2)
     if getmax_val == gusd and gusd > 0:
         source_used = "coinpaprika"
     elif getmax_val == lcw_usd and lcw_usd > 0:
         source_used = "livecoinwatch"
-
+    elif getmax_val == mgpts2 and mgpts2 > 0 :
+        source_used = "miningpoolstats"
+        
     # --- If both failed, avoid crash ---
     if getmax_val == 0:
         with open(fname, 'w') as file:
