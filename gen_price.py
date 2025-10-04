@@ -68,6 +68,7 @@ def gen_p():
 
     # --- Choose max between LCW and CoinPaprika ---
     getmax_val = max(lcw_usd, gusd,mgpts2)
+    
     if getmax_val == gusd and gusd > 0:
         source_used = "coinpaprika"
     elif getmax_val == lcw_usd and lcw_usd > 0:
@@ -89,16 +90,34 @@ def gen_p():
     btc_price = float(data2['quotes']['USD']['price'])
 
     btc_amount = getmax_val / btc_price
-    formatted_btc_amount = f"{btc_amount:.10f}"
-    formatted_usd_amount = f"{getmax_val:.10f}"
 
+    
+    # --- Get DOGE price ---
+    response3 = requests.get("https://api.coinpaprika.com/v1/tickers/doge-dogecoin", timeout=10)
+    response3.raise_for_status()
+    data3 = response3.json()
+    doge_price = float(data3['quotes']['USD']['price'])
+    doge_amount = 0
+    if doge_price > getmax_val:
+       doge_amount = doge_price / getmax_val
+    else:
+       doge_amount = getmax_val / doge_price
+    # -----------
+    print(f'doge_price:',doge_price)
+    print(f'getmax_val:',getmax_val)
+    print(f'doge_amount:',doge_amount)
+
+    formatted_btc_amount = f"{btc_amount:.10f}"
+    formatted_doge_amount = f"{doge_amount:.10f}"
+    formatted_usd_amount = f"{getmax_val:.10f}"
+    
     # --- Write to file ---
     with open(fname, 'w') as file:
         file.write(
-            f"{formatted_usd_amount},{formatted_btc_amount},source:{source_used}"
+            f"{formatted_usd_amount},{formatted_btc_amount},{formatted_doge_amount},source:{source_used}"
         )
 
-    print(f"Saved: {formatted_usd_amount} USD, {formatted_btc_amount} BTC, source={source_used}")
+    print(f"Saved: {formatted_usd_amount} USD, {formatted_btc_amount} BTC,{formatted_doge_amount} DOGE, source={source_used}")
 
 
 if __name__ == "__main__":
