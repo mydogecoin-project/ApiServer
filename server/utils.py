@@ -189,6 +189,7 @@ def getprice():
                 if len(parts) >= 2:
                     usd = parts[0]
                     btc = parts[1]
+                    doge = parts[2]
                     #print(f"Part 0: {usd}")
                     #print(f"Part 1: {btc}")
                 else:
@@ -200,6 +201,7 @@ def getprice():
 
         return {
             "price_btc": btc,
+            "price_doge": doge,
             "price_usd": usd,
             "status": "Success"
         }
