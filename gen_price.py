@@ -19,7 +19,7 @@ def gen_p():
 
     # --- Load API key ---
     livecoinwatch_api = None
-    with open('/root/api-server-mydoge/api-key.log', 'r') as file:
+    with open('/root/ApiServer/api-key.log', 'r') as file:
         for line in file:
             if 'endline' in line.lower():
                 break  
@@ -55,7 +55,7 @@ def gen_p():
 
     session = HTMLSession()
     resp = session.get(url)
-    resp.html.render(timeout=20)   # runs the JavaScript
+    resp.html.render(timeout=3) 
 
     price_span = resp.html.find("#stats_priceusd", first=True)
 
