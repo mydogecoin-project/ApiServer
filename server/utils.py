@@ -39,7 +39,7 @@ def reward(height):
     return int(satoshis(50.00000000) // (2 ** halvings))
 
 def reward2(block_height):
-    getrw = 5
+    getrw = 2.5
     return format(getrw, '.2f')
 
 def reward2bak(block_height):
@@ -162,7 +162,7 @@ def getprice():
     try:
         try:
             result = subprocess.run(
-                ['python3', '/root/api-server-mydoge/gen_price.py'],
+                ['python3', '/root/ApiServer/gen_price.py'],
                 check=True,
                 capture_output=True,
                 text=True
@@ -177,7 +177,7 @@ def getprice():
             btc = 0.0
             usd = 0.0
         try:
-            with open('/root/api-server-mydoge/price.log', 'r') as file:
+            with open('/root/ApiServer/price.log', 'r') as file:
                 content = file.read().strip()
 
             if not content:
@@ -195,7 +195,7 @@ def getprice():
                 else:
                     print("The file does not contain enough parts.")
         except FileNotFoundError:
-            print("The file '/root/api-server-mydoge/price.log' was not found.")
+            print("The file '/root/ApiServer/price.log' was not found.")
         except Exception as e:
             print(f"An error occurred: {e}")
 
